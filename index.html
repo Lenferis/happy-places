@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a100a">
+<title>Місця щасливих людей — фотоальбом</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Cormorant:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+
+<div id="loader" role="status" aria-label="Завантаження альбому">
+  <svg class="loader-rose" viewBox="0 0 100 100" aria-hidden="true">
+    <g fill="none" stroke="#c98a82" stroke-width="2" stroke-linecap="round">
+      <circle cx="50" cy="42" r="6.5"/>
+      <path d="M50 29 Q61 31 60 42 Q59 53 50 54 Q41 53 40 42 Q39 31 50 29" opacity=".85"/>
+      <path d="M50 23 Q68 25 68 42 Q68 59 50 61 Q32 59 32 42 Q32 25 50 23" opacity=".7"/>
+      <path d="M50 17 Q75 20 75 42 Q75 64 50 67 Q25 64 25 42 Q25 20 50 17" opacity=".55"/>
+      <path d="M50 67 Q46 76 44 86" stroke="#7d8a5a"/>
+      <path d="M50 74 Q58 72 63 64" stroke="#7d8a5a" opacity=".8"/>
+      <path d="M47 80 Q40 80 35 74" stroke="#7d8a5a" opacity=".8"/>
+    </g>
+  </svg>
+  <div class="loader-title">Місця щасливих людей</div>
+  <div class="loader-sub">фотоальбом про велике</div>
+  <div class="loader-bar"><div class="loader-bar-fill" id="loaderBarFill"></div></div>
+</div>
+
+<canvas id="scene" aria-label="3D фотоальбом" tabindex="0"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="light-leak" aria-hidden="true"></div>
+
+<button id="audioToggle" class="audio-toggle" aria-label="Увімкнути або вимкнути звук" title="Звук">
+  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2A4.5 4.5 0 0 0 14 7.97v8.06c1.48-.74 2.5-2.26 2.5-4.03zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4-.91 7-4.49 7-8.77s-3-7.86-7-8.77z"/></svg>
+  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2A4.5 4.5 0 0 0 14 7.97v8.06c1.48-.74 2.5-2.26 2.5-4.03zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.96 8.96 0 0 0 21 12c0-4.28-3-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.26c-.67.52-1.42.93-2.25 1.19v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
+</button>
+
+<div id="openHint" class="open-hint">Торкніться, щоб відкрити альбом</div>
+<div id="dragHint" class="drag-hint">Гортайте сторінки — торкніться краю або перетягніть куток</div>
+<div id="pageMeta" class="page-meta"><span id="pageNumber">1 / 9</span></div>
+
+<div id="assetWarning" class="asset-warning" role="status" aria-live="polite"></div>
+
+<div id="navLeft" class="edge-nav left" role="button" aria-label="Попередня сторінка"><span>‹</span></div>
+<div id="navRight" class="edge-nav right" role="button" aria-label="Наступна сторінка"><span>›</span></div>
+<button id="restartBtn" class="restart-btn" aria-label="Переглянути спочатку">Переглянути спочатку</button>
+
+<div id="fallback"><div><div class="fb-icon">✦</div>На жаль, ваш браузер не підтримує WebGL,<br>тому 3D-альбом не може завантажитися.<br><span style="opacity:.7;font-size:15px">Спробуйте оновити браузер або відкрити сторінку на іншому пристрої.</span></div></div>
+
+<audio id="music" src="music.mp3" loop preload="auto"></audio>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "@config/": "./src/config/",
+    "@core/": "./src/core/",
+    "@loaders/": "./src/loaders/",
+    "@paint/": "./src/paint/",
+    "@scene/": "./src/scene/",
+    "@interaction/": "./src/interaction/",
+    "@render/": "./src/render/"
+  }
+}
+</script>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

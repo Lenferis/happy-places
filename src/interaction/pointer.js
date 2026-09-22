@@ -1,15 +1,3 @@
-/* ============================================================
-   interaction/pointer.js
-   Вся работа с указателем:
-     - клик по закрытой обложке (открытие)
-     - клик по левому/правому краю (листание)
-     - drag за уголок разворота
-     - тап по голосовому виджету + скраб по волне
-     - тап по видео — вкл/выкл звук
-   Не управляет состоянием страниц напрямую — дёргает
-   turnForward/turnBackward/openAlbum из соседних модулей.
-   ============================================================ */
-
 import * as THREE from 'three';
 
 import { state, sheets } from '@core/store.js';
@@ -64,10 +52,116 @@ function localPoint(y){
 }
 
 /* ============================================================
-   HIT-ТЕСТ ГОЛОСОВОГО ВИДЖЕТА НА ВИДИМЫХ СТОРОНАХ
+   СОСТОЯНИЕ ЖЕСТОВ
+   ============================================================ */
+const activePointers = new Map();
+let pinchStartDist  = 0;
+let pinchStartCam   = 0;
+let panStartCamPos  = null;
+let panStartTgtPos  = null;
+let panStartPointer = null;
+let panMode = false;            // режим «рука» — панорамирование одним пальцем
+let handBtn = null;
+
+function cameraDistance(){ return camera.position.distanceTo(controls.target); }
+
+function dollyCamera(newDist){
+  const minD = controls.minDistance;
+  const maxD = controls.maxDistance;
+  newDist = Math.max(minD, Math.min(maxD, newDist));
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  camera.position.copy(controls.target).addScaledVector(dir, newDist);
+}
+
+function pinchGetDist(){
+  if(activePointers.size < 2) return 0;
+  const [a, b] = [...activePointers.values()];
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/* ============================================================
+   КНОПКА «РУКА»
+   ============================================================ */
+function createHandButton(){
+  handBtn = document.createElement('button');
+  handBtn.type = 'button';
+  handBtn.setAttribute('aria-label', 'Режим панорамування');
+  handBtn.title = 'Рука — панорамування';
+  handBtn.style.cssText = [
+    'position:fixed',
+    'top:max(20px, env(safe-area-inset-top))',
+    'left:max(20px, env(safe-area-inset-left))',
+    'z-index:300',
+    'width:46px',
+    'height:46px',
+    'border-radius:50%',
+    'background:rgba(40,24,12,.5)',
+    'border:1px solid rgba(217,178,122,.3)',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'cursor:pointer',
+    'padding:0',
+    'outline:none',
+    'opacity:0',
+    'pointer-events:none',
+    'transition:background .25s ease, border-color .25s ease, transform .25s ease, opacity .5s ease',
+    '-webkit-tap-highlight-color:transparent',
+  ].join(';');
+
+  handBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none"
+         stroke="#f7f0e1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+      <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+      <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+    </svg>`;
+
+  handBtn.addEventListener('pointerdown', (e) => {
+    // Не даём событию уйти на canvas
+    e.stopPropagation();
+  });
+  handBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    togglePanMode();
+  });
+
+  document.body.appendChild(handBtn);
+}
+
+function togglePanMode(){
+  panMode = !panMode;
+  if(handBtn){
+    if(panMode){
+      handBtn.style.background      = 'rgba(184,138,57,.85)';
+      handBtn.style.borderColor     = 'rgba(255,217,138,.95)';
+      handBtn.style.transform       = 'scale(1.06)';
+    } else {
+      handBtn.style.background      = 'rgba(40,24,12,.5)';
+      handBtn.style.borderColor     = 'rgba(217,178,122,.3)';
+      handBtn.style.transform       = 'scale(1)';
+    }
+  }
+  if(!panMode){
+    panStartCamPos = null;
+    panStartTgtPos = null;
+    panStartPointer = null;
+  }
+}
+
+function updateHandVisibility(){
+  if(!handBtn) return;
+  const show = state.mode === 'reading';
+  handBtn.style.opacity       = show ? '1' : '0';
+  handBtn.style.pointerEvents = show ? 'auto' : 'none';
+}
+
+/* ============================================================
+   HIT-ТЕСТ ГОЛОСА
    ============================================================ */
 function tryVoiceClick(){
-  // Текущий разворот, лицевая сторона
   const curSh = sheets[state.cur];
   if(curSh && curSh.voicesFront && curSh.voicesFront.length){
     const y  = restY(state.cur);
@@ -79,7 +173,6 @@ function tryVoiceClick(){
       if(hit){ hit.sheetIdx = state.cur; return hit; }
     }
   }
-  // Предыдущий лист, обратная сторона (она видна слева)
   if(state.cur > 0){
     const prevSh = sheets[state.cur - 1];
     if(prevSh && prevSh.voicesBack && prevSh.voicesBack.length){
@@ -98,10 +191,9 @@ function tryVoiceClick(){
 }
 
 /* ============================================================
-   HIT-ТЕСТ ВИДЕО — тап по видео включает/выключает звук
+   HIT-ТЕСТ ВИДЕО
    ============================================================ */
 function tryVideoClick(){
-  // Текущий лист, front-сторона
   const curSh = sheets[state.cur];
   if(curSh && curSh.videos.length){
     const y  = restY(state.cur);
@@ -120,7 +212,6 @@ function tryVideoClick(){
       }
     }
   }
-  // Предыдущий лист, back-сторона (видна слева)
   if(state.cur > 0){
     const prevSh = sheets[state.cur - 1];
     if(prevSh && prevSh.videos.length){
@@ -150,14 +241,15 @@ function tryVideoClick(){
    ============================================================ */
 export function initPointer(){
 
-  /* --- флаг «палец на холсте» (нужен для idle-вращения) --- */
+  createHandButton();
+  setInterval(updateHandVisibility, 200);   // следим за state.mode
+
+  /* --- флаг «палец на холсте» --- */
   sceneCanvas.addEventListener('pointerdown',   () => noteCanvasPointerDown(true),  true);
   sceneCanvas.addEventListener('pointerup',     () => noteCanvasPointerDown(false), true);
   sceneCanvas.addEventListener('pointercancel', () => noteCanvasPointerDown(false), true);
 
-  /* ----------------------------------------------------------
-     CLICK — открытие закрытой обложки
-     ---------------------------------------------------------- */
+  /* --- CLICK — открытие обложки --- */
   sceneCanvas.addEventListener('click', (e) => {
     if(state.mode !== 'closed' || state.animating) return;
     pointerRay(e);
@@ -165,18 +257,41 @@ export function initPointer(){
     if(hit.length) openAlbum();
   });
 
-  /* ----------------------------------------------------------
-     POINTERDOWN
-     1) приоритет — голосовой виджет (play / seek)
-     2) тап по видео — toggle звука
-     3) drag за уголок разворота
-     4) тап по левому краю — назад
-     ---------------------------------------------------------- */
+  /* --- POINTERDOWN --- */
   sceneCanvas.addEventListener('pointerdown', (e) => {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    /* PINCH: два пальца — зум (работает в любом режиме) */
+    if(activePointers.size === 2){
+      if(state.drag){
+        const sh = sheets[state.cur];
+        if(sh) sh.mat.uniforms.uCurl.value = 0;
+        state.drag = null;
+        controls.enabled = true;
+      }
+      panStartCamPos = null;
+      panStartTgtPos = null;
+      panStartPointer = null;
+
+      pinchStartDist = pinchGetDist();
+      pinchStartCam  = cameraDistance();
+      e.preventDefault();
+      return;
+    }
+
     if(state.animating) return;
     pointerRay(e);
     if(state.mode === 'closed') return;
     if(state.mode !== 'reading') return;
+
+    /* РЕЖИМ «РУКА»: один палец — панорамирование */
+    if(panMode){
+      panStartCamPos   = camera.position.clone();
+      panStartTgtPos   = controls.target.clone();
+      panStartPointer  = { x: e.clientX, y: e.clientY };
+      e.preventDefault();
+      return;
+    }
 
     /* 1) голос */
     const vhit = tryVoiceClick();
@@ -237,10 +352,37 @@ export function initPointer(){
     }
   });
 
-  /* ----------------------------------------------------------
-     POINTERMOVE — скраб по волне голоса ИЛИ drag страницы
-     ---------------------------------------------------------- */
+  /* --- POINTERMOVE --- */
   sceneCanvas.addEventListener('pointermove', (e) => {
+    if(activePointers.has(e.pointerId)){
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    /* PINCH в процессе */
+    if(activePointers.size === 2 && pinchStartDist > 0){
+      const dist = pinchGetDist();
+      if(dist > 0){
+        const ratio = pinchStartDist / dist;
+        dollyCamera(pinchStartCam * ratio);
+      }
+      return;
+    }
+
+    /* PAN в процессе (режим «рука») */
+    if(panStartCamPos && panStartPointer){
+      const dx = e.clientX - panStartPointer.x;
+      const dy = e.clientY - panStartPointer.y;
+      const k = cameraDistance() / 500;
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0);
+      const up    = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+      const offset = new THREE.Vector3()
+        .addScaledVector(right, -dx * k)
+        .addScaledVector(up,     dy * k);
+      camera.position.copy(panStartCamPos).add(offset);
+      controls.target.copy(panStartTgtPos).add(offset);
+      return;
+    }
+
     pointerRay(e);
 
     /* скраб по голосу */
@@ -285,10 +427,18 @@ export function initPointer(){
     );
   });
 
-  /* ----------------------------------------------------------
-     POINTERUP — решаем: залипнуть на месте или долистать
-     ---------------------------------------------------------- */
-  sceneCanvas.addEventListener('pointerup', () => {
+  /* --- POINTERUP --- */
+  sceneCanvas.addEventListener('pointerup', (e) => {
+    activePointers.delete(e.pointerId);
+    if(activePointers.size < 2) pinchStartDist = 0;
+
+    if(panStartCamPos){
+      panStartCamPos  = null;
+      panStartTgtPos  = null;
+      panStartPointer = null;
+      return;
+    }
+
     if(state.voiceScrub){ state.voiceScrub = null; return; }
     if(!state.drag) return;
 
@@ -299,7 +449,6 @@ export function initPointer(){
     const sh    = sheets[state.cur];
     const fling = d.vel > 0.0035;
 
-    // Тап без движения по «середине» страницы → вперёд
     if(!d.moved && sh.theta < 0.25){
       sh.theta = 0;
       sh.mat.uniforms.uTheta.value = 0;
@@ -338,10 +487,18 @@ export function initPointer(){
     });
   });
 
-  /* ----------------------------------------------------------
-     POINTERCANCEL — откат драга
-     ---------------------------------------------------------- */
-  sceneCanvas.addEventListener('pointercancel', () => {
+  /* --- POINTERCANCEL --- */
+  sceneCanvas.addEventListener('pointercancel', (e) => {
+    activePointers.delete(e.pointerId);
+    if(activePointers.size < 2) pinchStartDist = 0;
+
+    if(panStartCamPos){
+      panStartCamPos  = null;
+      panStartTgtPos  = null;
+      panStartPointer = null;
+      return;
+    }
+
     if(state.voiceScrub){ state.voiceScrub = null; return; }
     if(state.drag){
       const sh = sheets[state.cur];

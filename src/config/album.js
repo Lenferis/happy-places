@@ -237,11 +237,11 @@ export const PAGES = [
   bg: { type: 'paper' },
   elements: [
     { kind: 'photo', img: 'p77', at:{ x:0.30, y:0.55 },
-      w: 0.35, frame: 'polaroid' },
+      w: 0.35, frame: 'polaroid', aspect: 4/5 },
     { kind: 'photo', img: 'p76', at:{ x:0.70, y:0.55 },
-      w: 0.35, frame: 'polaroid' },
+      w: 0.35, frame: 'polaroid', aspect: 4/5 },
     { kind: 'photo', img: 'p78', at:{ x:0.49, y:0.90 },
-      w: 0.35, frame: 'polaroid' },
+      w: 0.35, frame: 'polaroid', aspect: 4/5 },
   ]
   },
   { type: 'photo', layout: 'grid', photos: [

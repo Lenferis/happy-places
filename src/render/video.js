@@ -165,7 +165,7 @@ function showSoundToast(on){
     toastEl.className = 'video-sound-toast';
     document.body.appendChild(toastEl);
   }
-  toastEl.textContent = on ? '🔊 Звук увімкнено' : '🔇 Звук вимкнено';
+  toastEl.textContent = on ? 'Звук увімкнено' : 'Звук вимкнено';
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1400);

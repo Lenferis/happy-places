@@ -535,3 +535,26 @@ button {
   outline-offset: 3px;
   border-radius: 4px;
 }
+/* Toast для видео-звука */
+.video-sound-toast{
+  position:fixed;
+  left:50%;
+  bottom:max(80px, calc(env(safe-area-inset-bottom) + 60px));
+  transform:translateX(-50%) translateY(20px);
+  z-index:250;
+  padding:10px 22px;
+  border-radius:22px;
+  background:rgba(40,24,12,.88);
+  color:#f7f0e1;
+  font-family:'Cormorant', serif;
+  font-size:16px;
+  letter-spacing:.03em;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .3s var(--ease), transform .3s var(--ease);
+  white-space:nowrap;
+}
+.video-sound-toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}

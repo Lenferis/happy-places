@@ -19,6 +19,6 @@ export const FOIL_STOPS = [
   [1,    '#9a7320']
 ];
 
-export const PHOTO_SCALE  = 1.0;
+export const PHOTO_SCALE  = 1.3;
 export const PHOTO_ASPECT = 4 / 3;
 export const SINGLE_PHOTO = { width: 620, tilt: 2.4, cx: 0.50, cy: 0.42, jitter: 12 };

@@ -1,3 +1,14 @@
+/* ============================================================
+   interaction/pointer.js
+   Вся работа с указателем:
+     - клик по закрытой обложке (открытие)
+     - клик по левому/правому краю (листание)
+     - drag за уголок разворота
+     - тап по голосовому виджету + скраб по волне
+     - тап по видео — вкл/выкл звук
+     - кнопка «рука» — режим панорамирования (вместо pinch)
+   ============================================================ */
+
 import * as THREE from 'three';
 
 import { state, sheets } from '@core/store.js';
@@ -52,36 +63,17 @@ function localPoint(y){
 }
 
 /* ============================================================
-   СОСТОЯНИЕ ЖЕСТОВ
+   КНОПКА «РУКА» — панорамирование
    ============================================================ */
-const activePointers = new Map();
-let pinchStartDist  = 0;
-let pinchStartCam   = 0;
+let panMode = false;
+let handBtn = null;
+
 let panStartCamPos  = null;
 let panStartTgtPos  = null;
 let panStartPointer = null;
-let panMode = false;            // режим «рука» — панорамирование одним пальцем
-let handBtn = null;
 
 function cameraDistance(){ return camera.position.distanceTo(controls.target); }
 
-function dollyCamera(newDist){
-  const minD = controls.minDistance;
-  const maxD = controls.maxDistance;
-  newDist = Math.max(minD, Math.min(maxD, newDist));
-  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
-  camera.position.copy(controls.target).addScaledVector(dir, newDist);
-}
-
-function pinchGetDist(){
-  if(activePointers.size < 2) return 0;
-  const [a, b] = [...activePointers.values()];
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-/* ============================================================
-   КНОПКА «РУКА»
-   ============================================================ */
 function createHandButton(){
   handBtn = document.createElement('button');
   handBtn.type = 'button';
@@ -107,6 +99,8 @@ function createHandButton(){
     'pointer-events:none',
     'transition:background .25s ease, border-color .25s ease, transform .25s ease, opacity .5s ease',
     '-webkit-tap-highlight-color:transparent',
+    'backdrop-filter:blur(6px)',
+    '-webkit-backdrop-filter:blur(6px)'
   ].join(';');
 
   handBtn.innerHTML = `
@@ -118,10 +112,7 @@ function createHandButton(){
       <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
     </svg>`;
 
-  handBtn.addEventListener('pointerdown', (e) => {
-    // Не даём событию уйти на canvas
-    e.stopPropagation();
-  });
+  handBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
   handBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -135,18 +126,18 @@ function togglePanMode(){
   panMode = !panMode;
   if(handBtn){
     if(panMode){
-      handBtn.style.background      = 'rgba(184,138,57,.85)';
-      handBtn.style.borderColor     = 'rgba(255,217,138,.95)';
-      handBtn.style.transform       = 'scale(1.06)';
+      handBtn.style.background  = 'rgba(184,138,57,.85)';
+      handBtn.style.borderColor = 'rgba(255,217,138,.95)';
+      handBtn.style.transform   = 'scale(1.06)';
     } else {
-      handBtn.style.background      = 'rgba(40,24,12,.5)';
-      handBtn.style.borderColor     = 'rgba(217,178,122,.3)';
-      handBtn.style.transform       = 'scale(1)';
+      handBtn.style.background  = 'rgba(40,24,12,.5)';
+      handBtn.style.borderColor = 'rgba(217,178,122,.3)';
+      handBtn.style.transform   = 'scale(1)';
     }
   }
   if(!panMode){
-    panStartCamPos = null;
-    panStartTgtPos = null;
+    panStartCamPos  = null;
+    panStartTgtPos  = null;
     panStartPointer = null;
   }
 }
@@ -242,7 +233,7 @@ function tryVideoClick(){
 export function initPointer(){
 
   createHandButton();
-  setInterval(updateHandVisibility, 200);   // следим за state.mode
+  setInterval(updateHandVisibility, 200);
 
   /* --- флаг «палец на холсте» --- */
   sceneCanvas.addEventListener('pointerdown',   () => noteCanvasPointerDown(true),  true);
@@ -259,26 +250,6 @@ export function initPointer(){
 
   /* --- POINTERDOWN --- */
   sceneCanvas.addEventListener('pointerdown', (e) => {
-    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    /* PINCH: два пальца — зум (работает в любом режиме) */
-    if(activePointers.size === 2){
-      if(state.drag){
-        const sh = sheets[state.cur];
-        if(sh) sh.mat.uniforms.uCurl.value = 0;
-        state.drag = null;
-        controls.enabled = true;
-      }
-      panStartCamPos = null;
-      panStartTgtPos = null;
-      panStartPointer = null;
-
-      pinchStartDist = pinchGetDist();
-      pinchStartCam  = cameraDistance();
-      e.preventDefault();
-      return;
-    }
-
     if(state.animating) return;
     pointerRay(e);
     if(state.mode === 'closed') return;
@@ -286,9 +257,10 @@ export function initPointer(){
 
     /* РЕЖИМ «РУКА»: один палец — панорамирование */
     if(panMode){
-      panStartCamPos   = camera.position.clone();
-      panStartTgtPos   = controls.target.clone();
-      panStartPointer  = { x: e.clientX, y: e.clientY };
+      panStartCamPos  = camera.position.clone();
+      panStartTgtPos  = controls.target.clone();
+      panStartPointer = { x: e.clientX, y: e.clientY };
+      try{ sceneCanvas.setPointerCapture(e.pointerId); }catch(err){}
       e.preventDefault();
       return;
     }
@@ -354,19 +326,7 @@ export function initPointer(){
 
   /* --- POINTERMOVE --- */
   sceneCanvas.addEventListener('pointermove', (e) => {
-    if(activePointers.has(e.pointerId)){
-      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    }
-
-    /* PINCH в процессе */
-    if(activePointers.size === 2 && pinchStartDist > 0){
-      const dist = pinchGetDist();
-      if(dist > 0){
-        const ratio = pinchStartDist / dist;
-        dollyCamera(pinchStartCam * ratio);
-      }
-      return;
-    }
+    pointerRay(e);
 
     /* PAN в процессе (режим «рука») */
     if(panStartCamPos && panStartPointer){
@@ -382,8 +342,6 @@ export function initPointer(){
       controls.target.copy(panStartTgtPos).add(offset);
       return;
     }
-
-    pointerRay(e);
 
     /* скраб по голосу */
     if(state.voiceScrub){
@@ -428,10 +386,7 @@ export function initPointer(){
   });
 
   /* --- POINTERUP --- */
-  sceneCanvas.addEventListener('pointerup', (e) => {
-    activePointers.delete(e.pointerId);
-    if(activePointers.size < 2) pinchStartDist = 0;
-
+  sceneCanvas.addEventListener('pointerup', () => {
     if(panStartCamPos){
       panStartCamPos  = null;
       panStartTgtPos  = null;
@@ -488,10 +443,7 @@ export function initPointer(){
   });
 
   /* --- POINTERCANCEL --- */
-  sceneCanvas.addEventListener('pointercancel', (e) => {
-    activePointers.delete(e.pointerId);
-    if(activePointers.size < 2) pinchStartDist = 0;
-
+  sceneCanvas.addEventListener('pointercancel', () => {
     if(panStartCamPos){
       panStartCamPos  = null;
       panStartTgtPos  = null;

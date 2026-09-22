@@ -111,14 +111,14 @@ export const PAGES = [
     { img: "p5", aspect: 4/3, frame: 'polaroid' }
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p6",  aspect: 4/3 },
-    { img: "p7",  aspect: 4/3 },
-    { img: "p8",  aspect: 4/3 },
-    { img: "p9", aspect: 4/3 }
+    { img: "p6",  aspect: 4/5 },
+    { img: "p7",  aspect: 4/5 },
+    { img: "p8",  aspect: 4/5 },
+    { img: "p9", aspect: 4/5 }
   ]},
   { type: 'photo', layout: 'duo', photos: [
-    { img: "p10", caption: '...', aspect: 4/3 },
-    { img: "p11", caption: '...', aspect: 4/3 }
+    { img: "p10", aspect: 4/5 },
+    { img: "p11", aspect: 4/5 }
   ]},
   { type: 'stack', style: 'fall', photos: [
     { img: "p12", x:0.50, y:0.38, w:0.55, rot:-6, aspect:4/3, frame:'polaroid' },
@@ -141,10 +141,10 @@ export const PAGES = [
     { img: "p22", aspect: 4/3 }
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p23", aspect: 4/3 },
-    { img: "p24", aspect: 4/3 },
-    { img: "p25", aspect: 4/3 },
-    { img: "p26", aspect: 4/3 }
+    { img: "p23", aspect: 4/5 },
+    { img: "p24", aspect: 4/5 },
+    { img: "p25", aspect: 4/5 },
+    { img: "p26", aspect: 4/5 }
   ]},
   { type: 'photo', photos: [
   { img: "v3", aspect: 9/16, tilt: 1.5, scale:0.5, video:true}
@@ -167,10 +167,10 @@ export const PAGES = [
     { img: "p37", aspect: 4/3 }
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p38", aspect: 4/3 },
-    { img: "p39", aspect: 4/3 },
-    { img: "p40", aspect: 4/3 },
-    { img: "p41", aspect: 4/3 }
+    { img: "p38", aspect: 4/5 },
+    { img: "p39", aspect: 4/5 },
+    { img: "p40", aspect: 4/5 },
+    { img: "p41", aspect: 4/5 }
   ]},
   { type: 'photo', photos: [
     { img: "v4", aspect: 9/16, tilt: 1.5, scale:0.5, video:true}
@@ -194,10 +194,10 @@ export const PAGES = [
     { img: "p95", aspect: 4/3 },
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p54", aspect: 4/3 },
-    { img: "p55", aspect: 4/3 },
-    { img: "p56", aspect: 4/3 },
-    { img: "p57", aspect: 4/3 }
+    { img: "p54", aspect: 4/5 },
+    { img: "p55", aspect: 4/5 },
+    { img: "p56", aspect: 4/5 },
+    { img: "p57", aspect: 4/5 }
   ]},
   { type: 'photo', photos: [
     { img: "v5", aspect: 9/16, scale:0.5, video:true }
@@ -220,10 +220,10 @@ export const PAGES = [
     { img: "p69", x:0.52, y:0.68, w:0.49, rot: 3, aspect:4/3, frame:'polaroid' }
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p70", aspect: 4/3 },
-    { img: "p71", aspect: 4/3 },
-    { img: "p72", aspect: 4/3 },
-    { img: "p73", aspect: 4/3 }
+    { img: "p70", aspect: 4/5 },
+    { img: "p71", aspect: 4/5 },
+    { img: "p72", aspect: 4/5 },
+    { img: "p73", aspect: 4/5 }
   ]},
   { type: 'photo', layout: 'duo', photos: [
     { img: "v6", aspect: 4/3, video:true },
@@ -244,37 +244,37 @@ export const PAGES = [
       w: 0.35, frame: 'polaroid' },
   ]
   },
-  { type: 'photo', layout: 'trio', photos: [
-    { img: "p75", aspect: 4/3, frame: 'polaroid' },
-    { img: "p80", aspect: 4/3, frame: 'polaroid' },
-    { img: "p81", aspect: 4/3, frame: 'polaroid' },
-    { img: "p82", aspect: 4/3, frame: 'polaroid' }
+  { type: 'photo', layout: 'grid', photos: [
+    { img: "p75", aspect: 4/5, frame: 'polaroid' },
+    { img: "p80", aspect: 4/5, frame: 'polaroid' },
+    { img: "p81", aspect: 4/5, frame: 'polaroid' },
+    { img: "p82", aspect: 4/5, frame: 'polaroid' }
   ]},
   { type: 'photo', photos: [
     { img: "v8", aspect: 9/16, scale:0.5, video:true },
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p83", aspect: 4/3 },
-    { img: "p84", aspect: 4/3 },
-    { img: "p85", aspect: 4/3 },
-    { img: "p86", aspect: 4/3 }
+    { img: "p83", aspect: 4/5 },
+    { img: "p84", aspect: 4/5 },
+    { img: "p85", aspect: 4/5 },
+    { img: "p86", aspect: 4/5 }
   ]},
   { type: 'photo', photos: [
     { img: "v9", aspect: 9/16, scale:0.5, video:true },
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p87", aspect: 4/3 },
-    { img: "p88", aspect: 4/3 },
-    { img: "p89", aspect: 4/3 },
-    { img: "p90", aspect: 4/3 }
+    { img: "p87", aspect: 4/5 },
+    { img: "p88", aspect: 4/5 },
+    { img: "p89", aspect: 4/5 },
+    { img: "p90", aspect: 4/5 }
   ]},
   { type: 'photo', photos: [
     { img: "v10", aspect: 9/16, scale:0.5, video:true },
   ]},
   { type: 'photo', layout: 'grid', photos: [
-    { img: "p91", aspect: 4/3 },
-    { img: "p92", aspect: 4/3 },
-    { img: "p93", aspect: 4/3 },
+    { img: "p91", aspect: 4/5 },
+    { img: "p92", aspect: 4/5 },
+    { img: "p93", aspect: 4/5 },
   ]},
   { type: 'photo', photos: [
     { img: "v11", aspect: 9/16, scale:0.5, video:true },

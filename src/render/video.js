@@ -1,5 +1,6 @@
 import { sheets, state } from '@core/store.js';
 import { mediaSize } from '@loaders/media.js';
+import { duckMusic } from '@core/audio.js';
 
 /* ============================================================
    Поддержка requestVideoFrameCallback
@@ -91,7 +92,10 @@ export function updateVideoPlayback(){
     for(const v of sh.videos){
       const shouldPlay = v.side === 'front' ? frontVisible : backVisible;
       if(shouldPlay){ if(v.el.paused){ const p = v.el.play(); if(p && p.catch) p.catch(() => {}); } }
-      else { if(!v.el.paused) v.el.pause(); }
+      else {
+        if(!v.el.paused) v.el.pause();
+        if(!v.el.muted) v.el.muted = true;   // ← сброс звука при уходе со страницы
+      }
     }
     if(HAS_RVFC){
       if(frontVisible) kickVideoRaf(sh, 'front'); else stopVideoRaf(sh, 'front');
@@ -117,4 +121,52 @@ export function updateLiveVideosFallback(now){
     if(i === curIdx) paintSide(sh, 'front');
     if(i === prevIdx) paintSide(sh, 'back');
   }
+}
+
+/* ============================================================
+   TAP-TO-UNMUTE
+   Видео по умолчанию muted (требование автоплея). Тап по видео
+   включает звук; ещё тап — выключает. Громкость фоновой музыки
+   автоматически приглушается, пока играет видео со звуком.
+   ============================================================ */
+let anyVideoUnmuted = false;
+
+export function toggleVideoSound(sheet, side, idx){
+  const vids = sheet.videos.filter(v => v.side === side);
+  const v = vids[idx];
+  if(!v || !v.el) return;
+
+  v.el.muted = !v.el.muted;
+
+  if(!v.el.muted){
+    if(v.el.paused){
+      const p = v.el.play();
+      if(p && p.catch) p.catch(() => {});
+    }
+  }
+
+  const anyUnmuted = sheets.some(sh =>
+    sh.videos.some(vv => vv.el && !vv.el.muted)
+  );
+  if(anyUnmuted !== anyVideoUnmuted){
+    anyVideoUnmuted = anyUnmuted;
+    duckMusic(anyUnmuted);
+  }
+
+  showSoundToast(!v.el.muted);
+}
+
+let toastEl = null;
+let toastTimer = null;
+
+function showSoundToast(on){
+  if(!toastEl){
+    toastEl = document.createElement('div');
+    toastEl.className = 'video-sound-toast';
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = on ? '🔊 Звук увімкнено' : '🔇 Звук вимкнено';
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1400);
 }

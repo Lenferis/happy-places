@@ -5,6 +5,7 @@
      - клик по левому/правому краю (листание)
      - drag за уголок разворота
      - тап по голосовому виджету + скраб по волне
+     - тап по видео — вкл/выкл звук
    Не управляет состоянием страниц напрямую — дёргает
    turnForward/turnBackward/openAlbum из соседних модулей.
    ============================================================ */
@@ -29,6 +30,7 @@ import { PAGE_W, PAGE_H } from '@scene/layout.js';
 import { restY, setSheetCurl } from '@scene/positions.js';
 import { proxyR, proxyCover } from '@scene/proxies.js';
 import { noteCanvasPointerDown } from '@render/loop.js';
+import { toggleVideoSound } from '@render/video.js';
 
 import { turnForward, turnBackward } from './flip.js';
 import { openAlbum } from './open-close.js';
@@ -96,6 +98,54 @@ function tryVoiceClick(){
 }
 
 /* ============================================================
+   HIT-ТЕСТ ВИДЕО — тап по видео включает/выключает звук
+   ============================================================ */
+function tryVideoClick(){
+  // Текущий лист, front-сторона
+  const curSh = sheets[state.cur];
+  if(curSh && curSh.videos.length){
+    const y  = restY(state.cur);
+    const lp = localPoint(y);
+    if(lp && lp.x >= -0.05 && lp.x <= PAGE_W + 0.05 && Math.abs(lp.z) <= PAGE_H * 0.55){
+      const px = lp.x / PAGE_W * TW;
+      const py = (0.5 + lp.z / PAGE_H) * TH;
+      const frontVids = curSh.videos.filter(v => v.side === 'front');
+      for(let i = 0; i < frontVids.length; i++){
+        const v  = frontVids[i];
+        const x0 = v.cx + v.mp.x, y0 = v.cy + v.mp.y;
+        const x1 = x0 + v.mp.w,   y1 = y0 + v.mp.h;
+        if(px >= x0 && px <= x1 && py >= y0 && py <= y1){
+          return { sheet: curSh, side: 'front', idx: i };
+        }
+      }
+    }
+  }
+  // Предыдущий лист, back-сторона (видна слева)
+  if(state.cur > 0){
+    const prevSh = sheets[state.cur - 1];
+    if(prevSh && prevSh.videos.length){
+      const y  = restY(state.cur - 1);
+      const lp = localPoint(y);
+      if(lp && lp.x >= -PAGE_W * 1.05 && lp.x <= 0.05 * PAGE_W && Math.abs(lp.z) <= PAGE_H * 0.55){
+        const u  = 1 + lp.x / PAGE_W;
+        const px = u * TW;
+        const py = (0.5 + lp.z / PAGE_H) * TH;
+        const backVids = prevSh.videos.filter(v => v.side === 'back');
+        for(let i = 0; i < backVids.length; i++){
+          const v  = backVids[i];
+          const x0 = v.cx + v.mp.x, y0 = v.cy + v.mp.y;
+          const x1 = x0 + v.mp.w,   y1 = y0 + v.mp.h;
+          if(px >= x0 && px <= x1 && py >= y0 && py <= y1){
+            return { sheet: prevSh, side: 'back', idx: i };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/* ============================================================
    НАВЕШИВАНИЕ ОБРАБОТЧИКОВ
    ============================================================ */
 export function initPointer(){
@@ -118,8 +168,9 @@ export function initPointer(){
   /* ----------------------------------------------------------
      POINTERDOWN
      1) приоритет — голосовой виджет (play / seek)
-     2) drag за уголок разворота
-     3) тап по левому краю — назад
+     2) тап по видео — toggle звука
+     3) drag за уголок разворота
+     4) тап по левому краю — назад
      ---------------------------------------------------------- */
   sceneCanvas.addEventListener('pointerdown', (e) => {
     if(state.animating) return;
@@ -147,12 +198,20 @@ export function initPointer(){
       return;
     }
 
+    /* 2) видео — toggle звука */
+    const vidhit = tryVideoClick();
+    if(vidhit){
+      e.preventDefault();
+      toggleVideoSound(vidhit.sheet, vidhit.side, vidhit.idx);
+      return;
+    }
+
     const sh = sheets[state.cur];
     const y  = sh ? restY(state.cur) : 0;
     const hit     = raycaster.intersectObject(state.cur < TOTAL ? proxyR : proxyCover, false);
     const hitLeft = raycaster.intersectObject(proxyR, false);
 
-    /* 2) drag за уголок */
+    /* 3) drag за уголок */
     if(hit.length && state.cur < TOTAL){
       const lp = localPoint(y);
       if(lp && lp.x > 0.06 * PAGE_W && lp.x < PAGE_W * 1.02 && Math.abs(lp.z) < PAGE_H * 0.55){
@@ -171,7 +230,7 @@ export function initPointer(){
       }
     }
 
-    /* 3) тап по левому краю — назад */
+    /* 4) тап по левому краю — назад */
     if(hitLeft.length || hit.length){
       const lp = localPoint(y);
       if(lp && lp.x < 0.06 * PAGE_W){ turnBackward(); }
